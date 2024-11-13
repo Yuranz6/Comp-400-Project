@@ -41,13 +41,14 @@ class Robot:
         """Update perceived map and detect obstacles within sensor range"""
         row, col = self.current_pos
         
-        # Clear previous dynamic obstacles from perceived map to draw the updated pos of obstacles
+        # First clear previous dynamic obstacles from perceived map
         for i in range(self.perceived_map.rows):
             for j in range(self.perceived_map.rows):
-                if self.perceived_map.grid[i][j].is_barrier() and not self.true_map.grid[i][j].is_barrier():
+                if (self.perceived_map.grid[i][j].is_barrier() and 
+                    not self.true_map.grid[i][j].is_barrier()):
                     self.perceived_map.grid[i][j].reset()
         
-        # First update static obstacles from true map
+        # Update static obstacles from true map within sensor range
         for i in range(-self.sensor_range, self.sensor_range + 1):
             for j in range(-self.sensor_range, self.sensor_range + 1):
                 new_row, new_col = row + i, col + j
@@ -66,14 +67,16 @@ class Robot:
                     elif true_spot.is_end():
                         perceived_spot.make_end()
         
-         # Then detect dynamic obstacles within sensor range
-        ox, oy = self.obstacles.get_obstacle_positions()  # Gets grid positions
+        # Only update dynamic obstacles that are actually moving obstacles
+        ox, oy = self.obstacles.get_obstacle_positions()  # Gets positions of actual moving obstacles
         for x, y in zip(ox, oy):
             dx = x - row
             dy = y - col
-            if abs(dx) + abs(dy) <= self.sensor_range:
+            if abs(dx) + abs(dy) <= self.sensor_range:  # Within sensor range
                 if (0 <= x < self.true_map.rows and 
-                    0 <= y < self.true_map.rows):
+                    0 <= y < self.true_map.rows and
+                    not self.true_map.grid[x][y].is_barrier()):  # Not a static barrier
+                    # Only make it a barrier if it's a position of an actual obstacle
                     self.perceived_map.grid[x][y].make_barrier()
     
     # ------------------------A* PATH PLANNING----------------------------------
@@ -267,50 +270,81 @@ class Robot:
     # ---------------------------END OF LOCAL REPLANNING----------------
     # ---------------------------ROBOT NAVIGATION----------------------------------
     def move(self):
-        """Move robot along the planned path"""
+        """Move robot along the planned path while avoiding dynamic obstacles"""
         if not self.path or not self.waypoints:
             print("No path to follow!")
             return False
             
-        # Get current and next waypoint
-        if self.current_waypoint_idx >= len(self.waypoints) - 1:
-            print("Reached goal!")
+        # Get forces from AFP
+        forces = self.calculate_window_potential()
+        if forces is None:
+            print("Reached goal or no valid forces!")
             return False
             
+        fx, fy, force_magnitude = forces
+        
+        # Current position
         current = self.current_pos
-        next_point = self.waypoints[self.current_waypoint_idx + 1]
         
-        # Check if we've reached current waypoint
-        dist_to_waypoint = ((current[0] - next_point[0])**2 + 
-                        (current[1] - next_point[1])**2)**0.5
-        
-        if dist_to_waypoint < 1.0:  # Within 1 grid cell of waypoint
-            self.current_waypoint_idx += 1
-            return True
-        
-        # Calculate movement direction
-        dx = next_point[0] - current[0]
-        dy = next_point[1] - current[1]
-        
-        # Normalize to get unit direction
-        length = (dx**2 + dy**2)**0.5
-        if length > 0:
-            dx = dx/length
-            dy = dy/length
-        
-        # Move one grid cell in the direction of next waypoint
-        new_x = int(round(current[0] + dx))
-        new_y = int(round(current[1] + dy))
+        # Calculate new position based on AFP forces
+        new_x = int(round(current[0] + fx))  # fx is already normalized in calculate_window_potential
+        new_y = int(round(current[1] + fy))
         
         # Check if new position is valid
         if (0 <= new_x < self.true_map.rows and 
             0 <= new_y < self.true_map.rows and 
-            not self.true_map.grid[new_x][new_y].is_barrier()):
+            not self.perceived_map.grid[new_x][new_y].is_barrier()):
             self.current_pos = (new_x, new_y)
+            
+            # Update perception after moving
+            self.update_perception()
+            
+            # Check if we need to replan global path
+            if self.check_path_validity():
+                return True
+            else:
+                print("Replanning global path...")
+                if self.global_path_planner():
+                    return True
+                else:
+                    print("Failed to find new path!")
+                    return False
+                
+        return False
+
+    def check_path_validity(self):
+        """Check if current path is still valid (no obstacles blocking it)"""
+        if not self.path:
+            return False
+            
+        # Check from current position to goal
+        current_idx = self.current_waypoint_idx
+        if current_idx >= len(self.waypoints) - 1:
             return True
             
-        return False
-    
+        # Check if any obstacles block the path to next waypoint
+        next_waypoint = self.waypoints[current_idx + 1]
+        current = self.current_pos
+        
+        # Simple line-of-sight check
+        dx = next_waypoint[0] - current[0]
+        dy = next_waypoint[1] - current[1]
+        steps = max(abs(dx), abs(dy))
+        
+        if steps == 0:
+            return True
+            
+        x_step = dx/steps
+        y_step = dy/steps
+        
+        for i in range(1, int(steps)):
+            check_x = int(round(current[0] + i*x_step))
+            check_y = int(round(current[1] + i*y_step))
+            
+            if self.perceived_map.grid[check_x][check_y].is_barrier():
+                return False
+                
+        return True
     
     def draw(self, win):
         """Visualize robot, sensor range, and perceived map"""
@@ -329,25 +363,29 @@ class Robot:
                 pygame.draw.line(win, (0, 255, 0), (start_x, start_y), 
                             (end_x, end_y), 2)
         
-        # Draw waypoints
+        # draw waypoints
         for i, point in enumerate(self.waypoints):
             x = point[1] * self.true_map.gap + self.true_map.gap // 2
             y = point[0] * self.true_map.gap + self.true_map.gap // 2
             color = (0, 0, 255) if i != self.current_waypoint_idx else (255, 165, 0)
             pygame.draw.circle(win, color, (x, y), 5)
         
-        # Draw robot
+        # draw robot
         row, col = self.current_pos
         center_x = col * self.true_map.gap + self.true_map.gap // 2
         center_y = row * self.true_map.gap + self.true_map.gap // 2
         pygame.draw.circle(win, (255, 0, 0), (center_x, center_y), 
                         self.true_map.gap // 3)
         
-        # Draw sensor range
+        # draw sensor range
         sensor_radius = self.sensor_range * self.true_map.gap
         pygame.draw.circle(win, (200, 200, 200), (center_x, center_y), 
                         sensor_radius, 1)
                 
+        # draw obstacles
+        self.obstacles.draw(win, self.true_map.gap)
+        
+        # TODO: draw the resultant force vector from AFP
                 
 '''
 
