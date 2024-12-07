@@ -1,137 +1,107 @@
 import numpy as np
 import pygame
-
 class Obstacles:
-    def __init__(self, num_obstacles, map_size, velocity_range=(-0.04, 0.04)):
-        """
-        Initialize moving obstacles with smooth grid-based movement
-        
-        Args:
-            num_obstacles: number of obstacles
-            map_size: size of the grid (rows/cols)
-            velocity_range: range of random velocities (in grid cells per frame)
-        """
+    def __init__(self, num_obstacles=30, map_size=50):
         self.num_obstacles = num_obstacles
         self.map_size = map_size
-        self.velocity_range = velocity_range
-        
-        # Positions (as floating point for smooth movement)
-        self.positions_x = []  # Current x positions
-        self.positions_y = []  # Current y positions
-        self.velocities_x = []  # Velocity in x direction
-        self.velocities_y = []  # Velocity in y direction
-        
-        # Grid positions (integer positions for collision detection)
-        self.grid_positions_x = []
-        self.grid_positions_y = []
-        
-        # Initialize random positions and velocities
+        self.positions = [] 
+        self.velocities = []  
         self.initialize_obstacles()
-        
-        # Boundary handling
-        self.buffer_zone = 1  # Cells from edge where obstacles will bounce
-        
+
     def initialize_obstacles(self):
-        """Initialize random positions and velocities for obstacles"""
-        for i in range(self.num_obstacles):
-            # Random position (avoiding edges)
-            x = np.random.randint(10, self.map_size - 10)
-            y = np.random.randint(10, self.map_size - 10)
-            
-            # Random velocity (alternating directions)
-            vx = np.random.uniform(*self.velocity_range) * (-1)**i
-            vy = np.random.uniform(*self.velocity_range) * (-1)**i
-            
-            self.positions_x.append(float(x))
-            self.positions_y.append(float(y))
-            self.grid_positions_x.append(int(x))
-            self.grid_positions_y.append(int(y))
-            self.velocities_x.append(vx)
-            self.velocities_y.append(vy)
-    
-    def update_positions(self, true_map):
-        """
-    Update obstacle positions based on velocities and handle collisions
-    
-    Args:
-        true_map: Map object containing static barriers
-    """
-        for i in range(self.num_obstacles):
-            # Store old position
-            old_x = self.positions_x[i]
-            old_y = self.positions_y[i]
-            
-            # Update positions
-            new_x = old_x + self.velocities_x[i]
-            new_y = old_y + self.velocities_y[i]
-            
-            # Check collisions with walls
-            if (new_x <= self.buffer_zone or 
-                new_x >= self.map_size - self.buffer_zone):
-                self.velocities_x[i] *= -1  # Reverse x velocity
-                new_x = np.clip(new_x, self.buffer_zone, 
-                            self.map_size - self.buffer_zone)
-                
-            if (new_y <= self.buffer_zone or 
-                new_y >= self.map_size - self.buffer_zone):
-                self.velocities_y[i] *= -1  # Reverse y velocity
-                new_y = np.clip(new_y, self.buffer_zone, 
-                            self.map_size - self.buffer_zone)
-            
-            
-            # Check collisions with static barriers
-            grid_x = int(new_x)
-            grid_y = int(new_y)
-            
-            # TODO: improve bouncing logic using reflection vector
-            # TODO: this bouncing logic is buggy, need further investigation
-            # Check if new position would hit a barrier
-            if true_map.grid[grid_x][grid_y].is_barrier():
-                # If moving more in x direction, bounce in x
-                if abs(self.velocities_x[i]) > abs(self.velocities_y[i]):
-                    self.velocities_x[i] *= -1
-                    new_x = old_x  # Stay at old x position
-                # If moving more in y direction, bounce in y
-                else:
-                    self.velocities_y[i] *= -1
-                    new_y = old_y  # Stay at old y position
-            
-            # Update positions
-            self.positions_x[i] = new_x
-            self.positions_y[i] = new_y
-            self.grid_positions_x[i] = int(new_x)
-            self.grid_positions_y[i] = int(new_y)
-    
-    def get_obstacle_positions(self):
-        """Return current grid positions of all obstacles"""
-        return (self.grid_positions_x, self.grid_positions_y)
-    
-    def get_exact_positions(self):
-        """Return exact floating point positions"""
-        return (self.positions_x, self.positions_y)
-    
-    def get_obstacle_velocities(self):
-        """Return current velocities of all obstacles"""
-        return (self.velocities_x, self.velocities_y)
-    
-    def draw(self, win, cell_size):
-        """
-        Draw obstacles on pygame window with smooth movement
+        """Initialize obstacles with random positions and velocities"""
+        self.positions = []
+        self.velocities = []
         
-        Args:
-            win: pygame window surface
-            cell_size: size of each grid cell
-        """
+        for _ in range(self.num_obstacles):
+            while True:
+                # Random position 
+                pos = [np.random.randint(0, self.map_size), 
+                    np.random.randint(0, self.map_size)]
+                
+                # simple check to ensure positions are not too close
+                valid_pos = True
+                for existing_pos in self.positions:
+                    if (abs(pos[0] - existing_pos[0]) < 2 and 
+                        abs(pos[1] - existing_pos[1]) < 2):
+                        valid_pos = False
+                        break
+                
+                if valid_pos:
+                    break
+            
+            # velo (randoom)
+            vel = [np.random.randint(-1, 2), 
+                np.random.randint(-1, 2)]
+            
+            if vel[0] == 0 and vel[1] == 0:
+                vel[np.random.randint(0, 2)] = np.random.choice([-1, 1])
+            
+            self.positions.append(pos)
+            self.velocities.append(vel)
+
+    def update_positions(self, map_obj):
+        """Update obstacle positions with realistic wall bouncing"""
         for i in range(self.num_obstacles):
-            # Use exact positions for drawing
-            x = self.positions_x[i] * cell_size + cell_size/2
-            y = self.positions_y[i] * cell_size + cell_size/2
+            current_pos = self.positions[i]
+            velocity = self.velocities[i]
             
-            # Draw obstacle
-            pygame.draw.circle(win, (0, 0, 0), (int(x), int(y)), cell_size/3)
+            new_x = current_pos[0] + velocity[0]
+            new_y = current_pos[1] + velocity[1]
             
-            # Draw velocity vector
-            end_x = x + self.velocities_x[i] * cell_size * 10
-            end_y = y + self.velocities_y[i] * cell_size * 10
-            pygame.draw.line(win, (255, 0, 0), (int(x), int(y)), 
-                           (int(end_x), int(end_y)), 2)
+            # Handle edge bouncing
+            if new_x < 0:
+                new_x = 0
+                self.velocities[i][0] = abs(velocity[0])  
+            elif new_x >= self.map_size:
+                new_x = self.map_size - 1
+                self.velocities[i][0] = -abs(velocity[0])  
+                
+            if new_y < 0:
+                new_y = 0
+                self.velocities[i][1] = abs(velocity[1]) 
+            elif new_y >= self.map_size:
+                new_y = self.map_size - 1
+                self.velocities[i][1] = -abs(velocity[1]) 
+            
+            # Handle wall collisions
+            if map_obj is not None:
+                #  horizontal wall collision
+                if (map_obj.grid[new_x][current_pos[1]].is_barrier()):
+                    self.velocities[i][0] = -velocity[0]  
+                    new_x = current_pos[0]  
+                
+                #  vertical wall collision
+                if (map_obj.grid[current_pos[0]][new_y].is_barrier()):
+                    self.velocities[i][1] = -velocity[1]  
+                    new_y = current_pos[1]  
+                    
+            # Check for other dynamic obstacles
+            for j, other_pos in enumerate(self.positions):
+                if i != j:
+                    if (abs(new_x - other_pos[0]) < 2 and 
+                        abs(new_y - other_pos[1]) < 2):
+                        # Random new direction on obstacle collision
+                        directions = [
+                            (-1, -1), (-1, 0), (-1, 1),
+                            (0, -1),           (0, 1),
+                            (1, -1),  (1, 0),  (1, 1)
+                        ]
+                        new_dir = directions[np.random.randint(len(directions))]
+                        self.velocities[i] = list(new_dir)
+                        break
+            
+            self.positions[i] = [new_x, new_y]
+        
+    def get_obstacle_positions(self):
+        """Return current obstacle positions as two lists of x and y coordinates"""
+        x_coords = [pos[0] for pos in self.positions]
+        y_coords = [pos[1] for pos in self.positions]
+        return x_coords, y_coords
+    
+    def draw(self, surface, cell_size):
+        """Draw obstacles on the given surface"""
+        for pos in self.positions:
+            x = pos[1] * cell_size + cell_size // 2
+            y = pos[0] * cell_size + cell_size // 2
+            pygame.draw.circle(surface, (255, 165, 0), (x, y), cell_size // 3)
