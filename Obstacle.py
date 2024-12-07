@@ -4,8 +4,8 @@ class Obstacles:
     def __init__(self, num_obstacles=30, map_size=50):
         self.num_obstacles = num_obstacles
         self.map_size = map_size
-        self.positions = []  # Current positions
-        self.velocities = []  # Movement velocities
+        self.positions = [] 
+        self.velocities = []  
         self.initialize_obstacles()
 
     def initialize_obstacles(self):
@@ -15,11 +15,11 @@ class Obstacles:
         
         for _ in range(self.num_obstacles):
             while True:
-                # Random position anywhere on the map
+                # Random position 
                 pos = [np.random.randint(0, self.map_size), 
                     np.random.randint(0, self.map_size)]
                 
-                # Check if position is not too close to other obstacles
+                # simple check to ensure positions are not too close
                 valid_pos = True
                 for existing_pos in self.positions:
                     if (abs(pos[0] - existing_pos[0]) < 2 and 
@@ -30,11 +30,10 @@ class Obstacles:
                 if valid_pos:
                     break
             
-            # Random velocity (-1, 0, or 1 for both x and y)
+            # velo (randoom)
             vel = [np.random.randint(-1, 2), 
                 np.random.randint(-1, 2)]
             
-            # Ensure velocity is not zero
             if vel[0] == 0 and vel[1] == 0:
                 vel[np.random.randint(0, 2)] = np.random.choice([-1, 1])
             
@@ -47,37 +46,36 @@ class Obstacles:
             current_pos = self.positions[i]
             velocity = self.velocities[i]
             
-            # Calculate new position
             new_x = current_pos[0] + velocity[0]
             new_y = current_pos[1] + velocity[1]
             
             # Handle edge bouncing
             if new_x < 0:
                 new_x = 0
-                self.velocities[i][0] = abs(velocity[0])  # Bounce right
+                self.velocities[i][0] = abs(velocity[0])  
             elif new_x >= self.map_size:
                 new_x = self.map_size - 1
-                self.velocities[i][0] = -abs(velocity[0])  # Bounce left
+                self.velocities[i][0] = -abs(velocity[0])  
                 
             if new_y < 0:
                 new_y = 0
-                self.velocities[i][1] = abs(velocity[1])  # Bounce down
+                self.velocities[i][1] = abs(velocity[1]) 
             elif new_y >= self.map_size:
                 new_y = self.map_size - 1
-                self.velocities[i][1] = -abs(velocity[1])  # Bounce up
+                self.velocities[i][1] = -abs(velocity[1]) 
             
             # Handle wall collisions
             if map_obj is not None:
-                # Check horizontal wall collision
+                #  horizontal wall collision
                 if (map_obj.grid[new_x][current_pos[1]].is_barrier()):
-                    self.velocities[i][0] = -velocity[0]  # Reverse x velocity only
-                    new_x = current_pos[0]  # Stay at current x
+                    self.velocities[i][0] = -velocity[0]  
+                    new_x = current_pos[0]  
                 
-                # Check vertical wall collision
+                #  vertical wall collision
                 if (map_obj.grid[current_pos[0]][new_y].is_barrier()):
-                    self.velocities[i][1] = -velocity[1]  # Reverse y velocity only
-                    new_y = current_pos[1]  # Stay at current y
-            
+                    self.velocities[i][1] = -velocity[1]  
+                    new_y = current_pos[1]  
+                    
             # Check for other dynamic obstacles
             for j, other_pos in enumerate(self.positions):
                 if i != j:
@@ -93,7 +91,6 @@ class Obstacles:
                         self.velocities[i] = list(new_dir)
                         break
             
-            # Update position
             self.positions[i] = [new_x, new_y]
         
     def get_obstacle_positions(self):

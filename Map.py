@@ -15,6 +15,8 @@ class Map:
         self.rows: number of rows in the grid
         self.gap: gap between each spot
         
+        Grid map inspiration from: 
+        
         '''
         
         # Colors
@@ -95,23 +97,18 @@ class Map:
         def update_neighbors(self, grid):
             self.neighbors = []
             
-            # DOWN
             if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier():
                 self.neighbors.append(grid[self.row + 1][self.col])
 
-            # UP
             if self.row > 0 and not grid[self.row - 1][self.col].is_barrier():
                 self.neighbors.append(grid[self.row - 1][self.col])
 
-            # RIGHT
             if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier():
                 self.neighbors.append(grid[self.row][self.col + 1])
 
-            # LEFT
             if self.col > 0 and not grid[self.row][self.col - 1].is_barrier():
                 self.neighbors.append(grid[self.row][self.col - 1])
 
-            # Diagonals
             if self.row < self.total_rows - 1 and self.col < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier():
                 self.neighbors.append(grid[self.row + 1][self.col + 1])
 

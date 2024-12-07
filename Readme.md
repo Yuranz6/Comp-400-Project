@@ -16,19 +16,6 @@ A Python-based robot navigation simulator that implements A\* path planning and 
 pip install pygame numpy
 ```
 
-## Project Structure
-
-```
-project/
-│
-├── Robot.py        # Main simulation file
-├── Map.py          # Map handling and visualization
-├── Obstacle.py     # Dynamic obstacle implementation
-│
-└── maps/           # Directory for storing map files
-    └── custom_map.npz  # Default map file
-```
-
 <code_block_to_apply_changes_from>
 
 ```bash
@@ -43,13 +30,15 @@ This will start the simulator with default settings and an empty map.
 python Robot.py --load_from map_name
 ```
 
-This loads a map from `maps/map_name.npz`
+This automatically loads a map from `maps/map_name.npz`
 
 ### Saving Maps
 
 ```bash
 python Robot.py --save_to map_name
 ```
+
+This command will save user-created map under the name specified by `map_name` in the `maps` directory. (after pressing 'ctrl + s' in the map creation mode)
 
 Note: Map name must be unique and not already in use.
 
@@ -60,7 +49,7 @@ Note: Map name must be unique and not already in use.
 - **Left Click**: Place walls/obstacles
 - **Right Click**: Remove walls/obstacles
 - **Ctrl + Left Click**: Set start position (green)
-- **Ctrl + Right Click**: Set goal position (red)
+- **Ctrl + Right Click**: Set goal position (blue)
 - **Ctrl + S**: Save map and initialize robot
 - **L**: Load existing map
 - **C**: Clear map
@@ -72,50 +61,29 @@ Note: Map name must be unique and not already in use.
 - **R**: Reset robot to start position
 - **C**: Clear map and return to map creation mode
 
-## Features
-
-1. **Map Creation and Editing**
-
-   - Interactive map drawing
-   - Save/load map functionality
-   - Start and goal position setting
-
-2. **Path Planning**
-
-   - A\* algorithm with direction penalties
-   - Automatic waypoint generation
-   - Dynamic path visualization
-
-3. **Navigation**
-
-   - Artificial Potential Field (APF) for local navigation
-   - Dynamic obstacle avoidance
-   - Automatic and manual control modes
-
-4. **Visualization**
-   - Real-time path display
-   - Robot trajectory tracking
-   - Obstacle movement visualization
-
 ## Common Issues
 
 1. **Map Loading Errors**
 
    - Ensure the `maps` directory exists
    - Check file permissions
-   - Verify map file format (.npz)
 
 2. **Navigation Issues**
    - Ensure start and goal positions are set
-   - Check for path blockage by obstacles
-   - Verify sensor range settings
 
 ## Notes
 
 - Default map is saved as 'custom_map.npz'
-- Sensor range is set to 5 grid cells
 - Dynamic obstacles are randomly generated
 - Auto-navigation can be interrupted with the 'A' key
+- The 3 map configurations used in the experiments are saved in the 'maps' directory (config_1.npz, config_2.npz, config_3.npz)
+  to reproduce the experiments, just run the following:
+
+```bash
+python Robot.py --load_from config_number
+```
+
+there are also several other maps in the 'maps' directory, feel free to test on those as well!
 
 ```
 

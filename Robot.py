@@ -842,7 +842,7 @@ def main():
             robot = None
             return False
 
-    # Initial map load if specified
+    # Initial map load 
     if args.load_from:
         load_path = f'maps/{args.load_from}.npz'
         map.load_map(filename=load_path)
