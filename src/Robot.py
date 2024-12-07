@@ -740,7 +740,7 @@ class Robot:
                         self.current_waypoint_idx += 1
                         print(f"Reached waypoint {self.current_waypoint_idx}")
             else:
-                print("Movement failed, APF will handle local avoidance...")
+                print("Oh no movement possible, robot need to stop and think! ")
         
         return True
 
