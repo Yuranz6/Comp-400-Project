@@ -201,7 +201,7 @@ class Map:
         self.start = None
         self.end = None
     
-    def save_map(self, filename="custom_map"):
+    def save_map(self, filename):
         """Save current map to file"""
         grid_array = np.zeros((self.rows, self.rows), dtype=np.int8)
         metadata = {
@@ -225,15 +225,13 @@ class Map:
                     grid_array[i][j] = 3
                     metadata['end_pos'] = (i, j)
         
-        save_path = os.path.join("maps", filename)
         os.makedirs("maps", exist_ok=True)
-        np.savez(save_path, grid=grid_array, metadata=metadata)
-        print(f"Map saved to {save_path}")
+        np.savez(filename, grid=grid_array, metadata=metadata)
+        print(f"Map saved to {filename}")
 
-    def load_map(self, filename="custom_map.npz"):
+    def load_map(self, filename):
         """Load map from file"""
-        load_path = os.path.join("maps", filename)
-        data = np.load(load_path)
+        data = np.load(filename)
         grid_array = data['grid']
         
         self.clear()  # Reset current grid
