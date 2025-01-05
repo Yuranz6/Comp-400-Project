@@ -1,4 +1,4 @@
-# Robot Navigation Simulator - Project with Dr.Joseph Vybihal
+# Robot Navigation Simulator
 
 A Python-based robot navigation simulator that implements A\* path planning and Artificial Potential Field (APF) for local obstacle avoidance.
 
